@@ -24,7 +24,7 @@
 #define loraDIO0 26
 
 #define spreadingFactor 12
-#define signalBandwidth 125E3
+#define signalBandwidth 62.5E3
 #define frequency 915E6
 #define codingRateDenominator 5
 #define preambleLength 8
@@ -71,6 +71,14 @@ String LoRaData;
 bool sendFlag;
 bool connection = false;
 bool setupFlag = false;
+//String ssid[] = {"benisville", "Airwave", "benisville guest"};
+//String password[] = {"uwplatthub", ""};
+
+const char* ssid[] = {"benisville", "Airwave", "benisville guest", "biden2020", "Netgear83", "Netgear93"};
+const char* password[] = {"uwplatthub", "gentlebreeze253", ""};
+
+//char ssid[] = "benisville";
+//char password[] = "uwplatthub";
 
 unsigned long previousMillis = 0;
 const long interval = 1500;
@@ -111,8 +119,39 @@ void setup() {
   Serial.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
   Serial.println();
   Serial.println("Setup Finished");
-}
+  Serial.println();
+  Serial.println("Trying preset WiFi credentials");
 
+  int count = 0;
+  int ssidSize = *(&ssid + 1) - ssid;
+  int passSize = *(&password + 1) - password;
+  for (int i = 0; i < ssidSize; i++) {
+    for (int j = 0; j < passSize; j++) {
+      if (WiFi.status() != WL_CONNECTED) {
+        WiFi.begin(ssid[i], password[j]);
+        while (WiFi.status() != WL_CONNECTED && count < 20) {
+          Serial.print(".");
+          count++;
+          delay(500);
+        }
+        count = 0;
+      }
+      else {
+        connection = true;
+        setupFlag = true;
+      }
+    }
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("connected to ");
+    Serial.println(WiFi.SSID());
+    connection = true;
+    setupFlag = true;
+  }
+  else {
+    Serial.println("preset credentials failed");
+  }
+}
 
 void loop() {
   // is configuration portal requested?
@@ -142,7 +181,6 @@ void loop() {
     setupFlag = false;
     sendPush("LoRa Receiver Setup Finished");
   }
-  // put your main code here, to run repeatedly:
   unsigned long currentMillis = millis();
 
   int packetSize = LoRa.parsePacket();
@@ -189,7 +227,7 @@ void sendPush(String message) {
     Serial.println("Connected to server!");
 
     //String content = "url=" + url + "&token=a57xzp7f57badgc3zyan6rvum6qzzb&user=utdnuh4tt1hd4hutfmk7q95uyoxpdm&device=iphone&title=PushNotfier&message=" + message;
-    String content = "token=a57xzp7f57badgc3zyan6rvum6qzzb&user=utdnuh4tt1hd4hutfmk7q95uyoxpdm&device=iphone&title=PushNotfier&message=" + message;
+    String content = "token=a57xzp7f57badgc3zyan6rvum6qzzb&user=utdnuh4tt1hd4hutfmk7q95uyoxpdm&device=iphone&title=LoRa&message=" + message;
     // Make a HTTP request:
     client.println("POST /1/messages.json HTTP/1.1");
     client.println("Host: api.pushover.net");
