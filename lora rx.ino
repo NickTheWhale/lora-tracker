@@ -18,6 +18,17 @@
 #include <stdlib.h>
 #include <LoRa.h>
 #include <string>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define OLED_SDA 4
+#define OLED_SCL 15
+#define OLED_RST 16
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 
 #define loraCS 18
 #define loraRST 14
@@ -63,6 +74,8 @@ const char* test_root_ca = \
 
 WiFiClientSecure client;
 
+//SSD1306Wire display(0x3c, SDA_OLED, SCL_OLED, RST_OLED);
+
 int rssi;
 int snr;
 long freqErr;
@@ -71,8 +84,7 @@ String LoRaData;
 bool sendFlag;
 bool connection = false;
 bool setupFlag = false;
-//String ssid[] = {"benisville", "Airwave", "benisville guest"};
-//String password[] = {"uwplatthub", ""};
+String currentSSID;
 
 const char* ssid[] = {"benisville", "Airwave", "benisville guest", "biden2020", "Netgear83", "Netgear93"};
 const char* password[] = {"uwplatthub", "gentlebreeze253", ""};
@@ -83,9 +95,24 @@ const char* password[] = {"uwplatthub", "gentlebreeze253", ""};
 unsigned long previousMillis = 0;
 const long interval = 1500;
 void setup() {
-  // put your setup code here, to run once:
+  pinMode(OLED_RST, OUTPUT);
+  digitalWrite(OLED_RST, LOW);
+  delay(20);
+  digitalWrite(OLED_RST, HIGH);
+  Wire.begin(OLED_SDA, OLED_SCL);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c, false, false)) {
+    Serial.println("SSD1306 allocation failed");
+  }
+
   Serial.begin(115200);
   Serial.println("\n Starting");
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("Starting LoRa RX");
+  display.display();
+
   pinMode(TRIGGER_PIN, INPUT);
   LoRa.setPins(loraCS, loraRST, loraDIO0);
 
@@ -94,11 +121,23 @@ void setup() {
   if (!LoRa.begin(frequency)) {
     Serial.println();
     Serial.println("LoRa init failed");
+    display.clearDisplay();
+    display.setTextColor(WHITE);
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("LoRa init failed");
+    display.display();
     while (1);
   }
   else {
     Serial.println();
     Serial.println("LoRa init success");
+    display.clearDisplay();
+    display.setTextColor(WHITE);
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("LoRa init success");
+    display.display();
   }
   Serial.println();
   LoRa.setFrequency(frequency);
@@ -143,8 +182,17 @@ void setup() {
     }
   }
   if (WiFi.status() == WL_CONNECTED) {
+    currentSSID = WiFi.SSID();
     Serial.print("connected to ");
-    Serial.println(WiFi.SSID());
+    Serial.println(currentSSID);
+    display.clearDisplay();
+    display.setTextColor(WHITE);
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("connected to: ");
+    display.setCursor(0, 8);
+    display.print(currentSSID);
+    display.display();
     connection = true;
     setupFlag = true;
   }
@@ -208,6 +256,20 @@ void loop() {
     String rssiString = String(rssi);
     String snrString = String(snr);
     String freqErrString = String(freqErrString);
+
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("connected to: ");
+    display.setCursor(0, 8);
+    display.print(currentSSID);
+    display.setCursor(0, 16);
+    display.print("rssi: ");
+    display.println(rssiString);
+    display.setCursor(0, 24);
+    display.print("mes: ");
+    display.println(LoRaData);
+    display.display();
 
     sendPush("RSSI: " + rssiString + " " + LoRaData);
     //sendPush("rssi: " + rssiString + " snr: " + snrString + " freqErr: " + freqErr + " " + LoRaData);
