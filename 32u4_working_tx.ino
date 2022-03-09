@@ -7,6 +7,7 @@
 Adafruit_GPS GPS(&GPSSerial);
 
 #define GPSECHO false
+#define lowPowerMode false
 #define statusInterval 2 //interval to send "no gps fix" measured in minutes
 
 #define loraCS 4
@@ -41,6 +42,7 @@ void setup() {
   pinMode(int2Pin, INPUT);
   Serial.println("gps tracker starting");
   Serial.println();
+  LoRa.print("gps tracker starting");
   //GPSSetup();
   //GPSSleep();
   if (!accel.init()) {
@@ -99,7 +101,7 @@ void loop() {
     activity = false;
   }
 
-  if (!activity) {
+  if (!activity && lowPowerMode) {
     //if (millis() - activityTimer > 35000) {
     activityTimer = millis();
     Serial.println("going into sleep mode");
@@ -218,12 +220,6 @@ void loraSleep() {
 }
 
 void GPSSetup() {
-  //  if (!GPS.begin(9600)) {
-  //    Serial.println("gps init failed");
-  //  }
-  //  else {
-  //    Serial.println("gps init success");
-  //  }
   GPS.begin(9600);
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
@@ -237,5 +233,10 @@ float getBattVolt() {
   int raw = analogRead(A0);
   float batt = (raw * 2.54) / 1024.0;
   batt = batt / 0.5;
-  return batt;
+  if (batt < 4.5) {
+    return batt;
+  }
+  else {
+    return 69;
+  }
 }
