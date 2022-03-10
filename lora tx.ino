@@ -16,12 +16,13 @@ Adafruit_GPS GPS(&GPSSerial);
 #define loraDIO0 7
 
 #define spreadingFactor 12
-#define signalBandwidth 62.5E3
+#define signalBandwidth 125E3
 #define frequency 915E6
 #define codingRateDenominator 5
 #define preambleLength 8
 #define syncWord 0x12
 #define txPower 20
+#define CRC true
 
 ADXL345_WE accel = ADXL345_WE(accelCS, true);
 uint32_t timer = millis();
@@ -47,6 +48,7 @@ void setup() {
   //GPSSleep();
   if (!accel.init()) {
     Serial.println("accel init failed");
+    LoRa.print("accel init failed");
   }
   else {
     accel.init();
@@ -213,6 +215,12 @@ void loraSetup() {
   LoRa.setPreambleLength(preambleLength);
   LoRa.setSyncWord(syncWord);
   LoRa.setTxPower(txPower);
+  if (CRC) {
+    LoRa.enableCrc();
+  }
+  else {
+    LoRa.disableCrc();
+  }
 }
 
 void loraSleep() {
@@ -237,6 +245,6 @@ float getBattVolt() {
     return batt;
   }
   else {
-    return 69;
+    return 404;
   }
 }
