@@ -45,6 +45,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 #define txPower 20
 #define CRC true
 
+const long displayDimTime = 10000;
+
 #define TRIGGER_PIN 0
 
 const char*  server = "api.pushover.net";  // Server URL
@@ -87,6 +89,8 @@ String LoRaData;
 bool sendFlag;
 bool connection = false;
 bool setupFlag = false;
+bool disp = true;
+volatile bool button = false;
 String currentSSID;
 
 const char* ssid[] = {"benisville", "Airwave", "benisville guest", "biden2020", "Netgear83", "Netgear93"};
@@ -96,6 +100,7 @@ const char* password[] = {"uwplatthub", "gentlebreeze253", ""};
 //char password[] = "uwplatthub";
 
 unsigned long previousMillis = 0;
+unsigned long previousDimMillis = 0;
 const long interval = 1500;
 void setup() {
   pinMode(OLED_RST, OUTPUT);
@@ -149,7 +154,7 @@ void setup() {
   Serial.println();
   LoRa.setFrequency(frequency);
   Serial.print("Frequency:                 ");   Serial.println(frequency);                    Serial.println();
-  display.setCursor(0, 0);                       display.print("Frequency:");                   
+  display.setCursor(0, 0);                       display.print("Frequency:");
   display.setCursor(SCREEN_WIDTH - (String(frequency / 1000000.0).length() * XOFFSET), 0);     display.print(frequency / 1000000.0);
 
   LoRa.setSpreadingFactor(spreadingFactor);
@@ -280,6 +285,8 @@ void setup() {
   else {
     Serial.println("Preset Credentials Failed");
   }
+  attachInterrupt(TRIGGER_PIN, ISR, CHANGE);
+  previousDimMillis = millis();
 }
 
 void loop() {
@@ -310,7 +317,6 @@ void loop() {
     setupFlag = false;
     sendPush("LoRa Receiver Setup Finished");
   }
-  unsigned long currentMillis = millis();
 
   int packetSize = LoRa.parsePacket();
   if (packetSize)
@@ -326,6 +332,9 @@ void loop() {
       sendFlag = true;
     }
   }
+
+  unsigned long currentMillis = millis();
+  unsigned long currentDimMillis = millis();
 
   if (currentMillis - previousMillis >= interval && sendFlag == true) {
     previousMillis = currentMillis;
@@ -351,10 +360,38 @@ void loop() {
     display.print("mes: ");
     display.println(LoRaData);
     display.display();
+    disp = true;
+    previousDimMillis = currentDimMillis;
 
     sendPush("RSSI: " + rssiString + " " + LoRaData);
     //sendPush("rssi: " + rssiString + " snr: " + snrString + " freqErr: " + freqErr + " " + LoRaData);
     sendFlag = false;
+  }
+
+  if (currentDimMillis - previousDimMillis >= displayDimTime && disp) {
+    disp = false;
+    Serial.println();
+    Serial.println("Turning off display");
+    Serial.println();
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(50, 28);
+    display.print("Zzz...");
+    display.display();
+    delay(1000);
+    display.clearDisplay();
+    display.display();
+  }
+
+  if (button) {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("we back");
+    display.display();
+    previousDimMillis = currentDimMillis;
+    disp = true;
+    button = false;
   }
 }
 
@@ -396,4 +433,8 @@ void sendPush(String message) {
     Serial.println();
     client.stop();
   }
+}
+
+void ISR() {
+  button = true;
 }
